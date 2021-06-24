@@ -1,4 +1,4 @@
-SUBROUTINE Get_timestep(c,v,n, eps, dx, dt)
+SUBROUTINE timestep(c,v,n, eps, dx, dt)
     IMPLICIT none
     integer :: n,i
     REAL, dimension(n) :: c,v

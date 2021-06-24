@@ -16,7 +16,7 @@ subroutine save_timestep(x, rho, v, P, n, t, nstep)
     end do
 
 100 FORMAT(A4,i5.5,A4)
-200 FORMAT(I3, F10.3, I3)
+200 FORMAT(I3, F15.5, I3)
 300 FORMAT(4(ES14.7E2))
 
     return 

@@ -5,8 +5,6 @@ PROGRAM main
     real,dimension(:), allocatable ::  x, c
     real,dimension(:), allocatable ::  P, dP, P1, dP1
     REAL, dimension(:,:), allocatable :: A_coef, B_coef
-    REAL, dimension(3,3) :: m_test
-    REAL, dimension(3) :: x_test, y_test
 
     real :: rho_low, rho_high
     real :: dx, dt, alpha
@@ -15,30 +13,16 @@ PROGRAM main
     REAL :: eps, theta
     integer :: i, n, step
 
-    PRINT *, "== init test =="
-    DO i=1,3
-        x_test(i) = i
-        DO step=1,3
-            m_test(step,i) = i*step
-        END DO
-    END DO
-
-    PRINT *, x_test
-    PRINT *, m_test
-    CALL lhs(m_test, x_test, y_test, 3)
-    PRINT *, y_test
-    PRINT *, "== Fin test =="
-
 !   Set the number of points of the grid
     n = 30
     rho_high = 1e-20
     rho_low = rho_high*1e-4
     L = 1e15
     gam = 5.0/3.0
-    A = 1.78e22 ! Del informe
+    A = 1.78e2 ! Del informe
     t = 0
-    t_end = 1e17
-    eps = 0.1
+    t_end = 1e7
+    eps = 0.01
     theta = 0.5 !0 = explicito, 1= implicito
     step = 0
 
@@ -70,19 +54,19 @@ PROGRAM main
 
     call init_x(x,n,L,dx)
     call init_rho(rho,n, rho_low, rho_high)
-    print *,c
 
     print *, "start sim loop"
     DO while (t < t_end)
 
         CALL Sound_Speed(P, rho, c, n, gam)
-        CALL Get_timestep(c,v,n,eps,dx,dt)
+        CALL timestep(c,v,n,eps,dx,dt)
+        print *,c
         print *, step, dt
 
         alpha = dt/(2*dx)
 
         !======= Paso Predictor =======
-        ! El paso predictor consiste en el metodo de eluler explicito.
+        ! El paso predictor consiste en el metodo de euler explicito.
         ! Este paso solo requiere de la matriz B, por lo que construimos dicha 
         ! matriz usando theta = 0.
         CALL mk_matrix_B(B_coef, v , n, alpha, 0)
@@ -96,21 +80,38 @@ PROGRAM main
 
         ! Para la conservacion de momento, hacemos lo mismo, y sumamos la derivada de la presion:
         Call lhs(B_coef, phi, phi1, n)
+        phi1 = phi1 - dt*dP 
 
-
-
+        ! Obrenemos v a partir de phi y rho:
+        DO i=1,n
+            v1(i) = phi1(i)/rho1(i)
+        END DO
         !======= Fin Paso Predictor =======
 
-        call save_timestep(x, rho, v,P,n, t, step)
+        ! Si solo queremos el metodo de euler explicito, entonces solo necesitamos salta al final del timestep:
+        IF (theta.EQ.0) THEN
+            goto 100
+        END IF 
+
+        !===== Pasos correctores =====
+
+        
+
+        !===== Fin Pasos correctores =====
+
+        ! Una vez conformes con los valores rho1 y v1, reemplazamos rho y v:
+100     DO i=1,n
+            rho(i) = rho1(i)
+            v(i)   = v1(i)
+        END DO
+        ! Y guardamos los resultados.
+        call save_timestep(x, rho, v,P, n, t, step)
 
     t = t + dt
     step = step +1
 
     END DO
     print *, "END sim loop"
-
-    call pres_diff(P, dP, n, dx, rho_low, rho_high, A, gam)
-
 
 ! ======== FIN DEL PROGRAMA ===========
     deallocate(x)
