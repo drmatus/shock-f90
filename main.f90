@@ -23,7 +23,7 @@ PROGRAM main
     t = 0
     t_end = 1e7
     eps = 0.01
-    theta = 0.5 !0 = explicito, 1= implicito
+    theta = 0.0 !0 = explicito, 1= implicito
     step = 0
 
 !   Allocate memory to the arrays
@@ -79,6 +79,10 @@ PROGRAM main
         Call lhs(B_coef, rho, rho1, n)
 
         ! Para la conservacion de momento, hacemos lo mismo, y sumamos la derivada de la presion:
+        do i=1,n
+            phi(i) = rho(i)*v(i)
+        end do
+        
         Call lhs(B_coef, phi, phi1, n)
         phi1 = phi1 - dt*dP 
 
