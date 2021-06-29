@@ -29,7 +29,7 @@ subroutine Pres_diff(P, dP, n, dx, rho_low, rho_high, A, gam)
 
     dx2 = 2*dx
     do i=2, n-1
-        dP(i) = (P(i-1) - P(i+1))/dx2
+        dP(i) = (P(i+1) - P(i-1))/dx2
     end do
     dP(1) = (Press(rho_high, A, gam) - P(2))/dx2
     dP(n) = (P(n-1) - Press(rho_low, A, gam))/dx2
