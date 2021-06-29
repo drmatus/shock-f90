@@ -13,20 +13,35 @@ PROGRAM main
     REAL :: eps, theta
     integer :: i, n, step
 
+!   ======= Program parameters ==========
 !   Set the number of points of the grid
-    n = 30
+    n = 10
+!   Densitty of the first half
     rho_high = 1e-20
+!   Densitty of the second half
     rho_low = rho_high*1e-4
-    L = 1e15
+!   Lenght of simulation area
+    L = 3e15
+!   Adiabatic constant
     gam = 5.0/3.0
-    A = 1.78e2 ! Del informe
-    t = 0
-    t_end = 1e7
-    eps = 0.01
+!   time at end of simulation
+    t_end = 1e30
+!   staility parameter
+    eps = 0.00001
+!   scheme selector
     theta = 0.0 !0 = explicito, 1= implicito
-    step = 0
 
-!   Allocate memory to the arrays
+
+!   ======= Other variable initialization ==========
+    alpha = 0.0
+    dt = 0.0
+    dx = 0.0
+    step = 0.0
+    t = 0.0
+    i = 0
+
+
+!   ======= Allocate memory to the arrays ========
     allocate(x(n))
     allocate(c(n))
     allocate(rho(n))
@@ -42,7 +57,7 @@ PROGRAM main
     allocate(A_coef(n,n))
     allocate(B_coef(n,n))
 
-!   Initialize arrays with some values
+!   ========== Initialize arrays with some values ========
     v = 0.0
     v1 = 0.0
     rho1 = 0.0
@@ -51,17 +66,21 @@ PROGRAM main
     A_coef = 0.0
     B_coef = 0.0
 
+!   Set the normalization constant for the gas:
+    CALL gas_norm(rho_high, gam, 10.0, A)
 
     call init_x(x,n,L,dx)
     call init_rho(rho,n, rho_low, rho_high)
+    CALL pressure_array(A, gam, rho, P, n)
+
+    call save_timestep(x, rho, v, P, n, t, step)
+    print *, step, t
 
     print *, "start sim loop"
     DO while (t < t_end)
 
-        CALL Sound_Speed(P, rho, c, n, gam)
+        CALL Sound_Speed(rho, c, n, gam,A)
         CALL timestep(c,v,n,eps,dx,dt)
-        print *,c
-        print *, step, dt
 
         alpha = dt/(2*dx)
 
@@ -75,14 +94,15 @@ PROGRAM main
         CALL pressure_array(A, gam, rho, P, n)
         CALL pres_diff(P, dP, n, dx, rho_low, rho_high, A, gam)
 
+        ! Consruimos el momentum del timestep actual
+        do i=1,n
+            phi(i) = rho(i)*v(i)
+        end do
+
         !Para la conservacion de masa, multiplicamos la matriz B por rho
         Call lhs(B_coef, rho, rho1, n)
 
         ! Para la conservacion de momento, hacemos lo mismo, y sumamos la derivada de la presion:
-        do i=1,n
-            phi(i) = rho(i)*v(i)
-        end do
-        
         Call lhs(B_coef, phi, phi1, n)
         phi1 = phi1 - dt*dP 
 
@@ -108,11 +128,16 @@ PROGRAM main
             rho(i) = rho1(i)
             v(i)   = v1(i)
         END DO
-        ! Y guardamos los resultados.
-        call save_timestep(x, rho, v,P, n, t, step)
+        ! Reclculamos la presion
+        CALL pressure_array(A, gam, rho, P, n)
 
-    t = t + dt
-    step = step +1
+        ! Y guardamos los resultados.
+
+        t = t + dt
+        step = step +1
+
+        print *, step, t, dt
+        call save_timestep(x, rho, v,P, n, t, step)
 
     END DO
     print *, "END sim loop"

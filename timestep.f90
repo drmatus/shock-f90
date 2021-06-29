@@ -5,9 +5,9 @@ SUBROUTINE timestep(c,v,n, eps, dx, dt)
     REAL :: eps, dx
     REAL :: dt, dt_1, maxv
 
-    dt_1 = 1.0/max(c(1), v(1))
+    dt_1 = 1.0/max(abs(c(1)), abs(v(1)))
     do i=2,n
-        maxv = 1.0/max(c(i), v(i))
+        maxv = 1.0/max(abs(c(i)), abs(v(i)))
         dt_1 = min(maxv, dt_1)
     END do
 
